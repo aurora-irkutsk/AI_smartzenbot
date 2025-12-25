@@ -26,7 +26,7 @@ async def handle_message(message: Message):
         # Инициализация Groq-клиента ВНУТРИ функции (безопасно)
         from openai import OpenAI
         client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
+            base_url="https://api.groq.com/openai/v1",  # ← УБЕРИТЕ ПРОБЕЛЫ В КОНЦЕ!
             api_key=os.getenv("GROQ_API_KEY", "").strip()
         )
         
@@ -36,6 +36,10 @@ async def handle_message(message: Message):
             timeout=30.0
         )
         await message.answer(response.choices[0].message.content.strip())
+        
+    except Exception as e:
+        print(f"❌ Groq error: {e}")
+        await message.answer("⚠️ Ошибка AI. Попробуйте позже.")
         
     except Exception as e:
         print(f"❌ Groq error: {e}")

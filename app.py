@@ -33,21 +33,23 @@ async def handle_message(message: Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # 🔥 Правильное имя модели: qwen-max
         response = dashscope.Generation.call(
             model="qwen-max",
             messages=[{"role": "user", "content": user_text}],
             result_format="message"
         )
+        print(f"📊 Qwen ответ: status={response.status_code}, request_id={response.request_id}")
         if response.status_code == 200:
             ai_reply = response.output.choices[0].message.content.strip()
             await message.answer(ai_reply)
         else:
-            await message.answer("❌ Ошибка AI: проверьте ключ и модель.")
+            # 🔥 Выводим точную ошибку
+            error_msg = response.message if hasattr(response, 'message') else str(response)
+            print(f"❌ Ошибка Qwen: {error_msg}")
+            await message.answer(f"❌ AI ошибка {response.status_code}: {error_msg}")
     except Exception as e:
-        print(f"Ошибка DashScope: {e}")
-        await message.answer("⚠️ Внутренняя ошибка сервера.")
-
+        print(f"💥 Исключение: {e}")
+        await message.answer("⚠️ Серверная ошибка.")
 dp.include_router(router)
 
 # Webhook функции

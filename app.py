@@ -23,33 +23,37 @@ async def start(message: Message):
 # 🔥 ОДИН обработчик для всех сообщений
 @router.message()
 async def handle_message(message: Message):
-    # Если это /start — уже обработано, поэтому сюда приходят ТОЛЬКО обычные сообщения
-    user_text = message.text
+    print(f"📩 Получено: '{message.text}'")
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
         api_key = os.getenv("QWEN_API_KEY", "").strip()
+        print(f"🔑 Длина ключа: {len(api_key)}")  # Должно быть > 30
+        
         if not api_key:
-            await message.answer("❌ QWEN_API_KEY не задан в настройках.")
+            await message.answer("❌ Ключ не задан.")
             return
 
         import dashscope
         dashscope.api_key = api_key
-        # 🔥 УБРАЛ ПРОБЕЛЫ В КОНЦЕ!
         dashscope.base_http_api_url = 'https://dashscope-intl.aliyuncs.com/api/v1'
 
         response = dashscope.Generation.call(
-            model="qwen-turbo",
-            messages=[{"role": "user", "content": user_text}],
+            model="qwen-turbo",  # ← временно qwen-turbo
+            messages=[{"role": "user", "content": message.text}],
             result_format="message"
         )
 
+        print(f"📊 Статус: {response.status_code}")
         if response.status_code == 200:
-            ai_reply = response.output.choices[0].message.content.strip()
-            await message.answer(ai_reply)
+            await message.answer(response.output.choices[0].message.content.strip())
         else:
-            error_msg = getattr(response, 'message', 'Неизвестная ошибка')
-            await message.answer(f"❌ AI ошибка: {error_msg[:150]}")
+            msg = getattr(response, 'message', 'Ошибка')
+            await message.answer(f"❌ {msg}")
+            
+    except Exception as e:
+        print(f"💥 ОШИБКА: {e}")
+        await message.answer(f"⚠️ Ошибка: {str(e)[:100]}")
             
     except Exception as e:
         print(f"💥 Qwen exception: {e}")

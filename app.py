@@ -28,20 +28,21 @@ async def start(message: Message):
     await message.answer("🧠 Привет! Я SmartZen на базе **Google Gemini** через OpenRouter.\n\n💡 Задайте любой вопрос!")
 
 @router.message()
+@router.message()
 async def handle_message(message: Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
         response = client.chat.completions.create(
-            model="google/gemini-pro",
+            model="meta-llama/llama-3.1-8b-instruct",  # ← бесплатная и надёжная
             messages=[{"role": "user", "content": message.text}],
             timeout=30.0
         )
         await message.answer(response.choices[0].message.content.strip())
         
     except Exception as e:
-        print(f"❌ OpenRouter error: {e}")
-        await message.answer("⚠️ Ошибка AI. Попробуйте позже.")
+        print(f"❌ Полная ошибка OpenRouter: {repr(e)}")
+        await message.answer(f"⚠️ Ошибка: {str(e)[:150]}")
 
 dp.include_router(router)
 

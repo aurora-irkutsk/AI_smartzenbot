@@ -20,8 +20,26 @@ async def start(message: Message):
     await message.answer("✅ Работает! Webhook активен.")
 
 @router.message()
-async def echo(message: Message):
-    await message.answer(f"Вы написали: {message.text}")
+async def handle_message(message: Message):
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    try:
+        # Инициализация Groq-клиента ВНУТРИ функции (безопасно)
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=os.getenv("GROQ_API_KEY", "").strip()
+        )
+        
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Актуальная модель
+            messages=[{"role": "user", "content": message.text}],
+            timeout=30.0
+        )
+        await message.answer(response.choices[0].message.content.strip())
+        
+    except Exception as e:
+        print(f"❌ Groq error: {e}")
+        await message.answer("⚠️ Ошибка AI. Попробуйте позже.")
 
 dp.include_router(router)
 

@@ -23,6 +23,13 @@ async def start(message: Message):
             [KeyboardButton(text="🧹 Очистить контекст")]
         ],
         resize_keyboard=True
+    )
+    await message.answer(
+        "🧠 Привет! Я Smart-Zen.\n"
+        "📝 Пиши любой вопрос — отвечу.\n"
+        "🖼️ Или нажми кнопку, чтобы создать изображение!",
+        reply_markup=kb
+    )
 
 @router.message(lambda msg: msg.text == "🖼️ Создать картинку")
 async def image_button(message: Message):
@@ -31,13 +38,6 @@ async def image_button(message: Message):
 @router.message(lambda msg: msg.text == "🧹 Очистить контекст")
 async def clear_button(message: Message):
     await message.answer("🧠 Контекст очищен. О чём поговорим?")
-    )
-    await message.answer(
-        "🧠 Привет! Я SmartZen.\n"
-        "📝 Пиши любой вопрос — отвечу.\n"
-        "🖼️ Или нажми кнопку, чтобы создать изображение!",
-        reply_markup=kb
-    )
 
 @router.message()
 async def handle_message(message: Message):

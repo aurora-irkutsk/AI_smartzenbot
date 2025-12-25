@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
-# Только Telegram
+# Telegram settings
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "test-secret").strip()
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzenbot.up.railway.app").strip()
@@ -20,37 +20,24 @@ router = Router()
 async def start(message: Message):
     await message.answer("✅ Бот работает! Webhook активен.")
 
-@router.message()
-async def echo(message: Message):
-    await message.answer(f"Вы написали: {message.text}")
-
-dp.include_router(router)
-
-async def on_startup(app):
-    print(f"✅ Устанавливаю webhook: {WEBHOOK_URL}")
-    await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET)
-
-async def on_shutdown(app):
-    await bot.delete_webhook()
-
+# 🔥 ОДИН обработчик для всех сообщений
 @router.message()
 async def handle_message(message: Message):
+    # Если это /start — уже обработано, поэтому сюда приходят ТОЛЬКО обычные сообщения
     user_text = message.text
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # Получаем API-ключ
         api_key = os.getenv("QWEN_API_KEY", "").strip()
         if not api_key:
-            await message.answer("❌ QWEN_API_KEY не настроен.")
+            await message.answer("❌ QWEN_API_KEY не задан в настройках.")
             return
 
-        # Импортируем и настраиваем dashscope
         import dashscope
         dashscope.api_key = api_key
+        # 🔥 УБРАЛ ПРОБЕЛЫ В КОНЦЕ!
         dashscope.base_http_api_url = 'https://dashscope-intl.aliyuncs.com/api/v1'
 
-        # Запрос к Qwen
         response = dashscope.Generation.call(
             model="qwen-max",
             messages=[{"role": "user", "content": user_text}],
@@ -61,12 +48,21 @@ async def handle_message(message: Message):
             ai_reply = response.output.choices[0].message.content.strip()
             await message.answer(ai_reply)
         else:
-            error_msg = getattr(response, 'message', 'Ошибка API')
-            await message.answer(f"❌ AI: {error_msg[:150]}")
+            error_msg = getattr(response, 'message', 'Неизвестная ошибка')
+            await message.answer(f"❌ AI ошибка: {error_msg[:150]}")
             
     except Exception as e:
-        print(f"Ошибка Qwen: {e}")
-        await message.answer("⚠️ Ошибка AI. Проверьте консоль.")
+        print(f"💥 Qwen exception: {e}")
+        await message.answer("⚠️ Ошибка сервера. Попробуйте позже.")
+
+dp.include_router(router)
+
+async def on_startup(app):
+    print(f"✅ Setting webhook: {WEBHOOK_URL}")
+    await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET)
+
+async def on_shutdown(app):
+    await bot.delete_webhook()
 
 def main():
     app = web.Application()

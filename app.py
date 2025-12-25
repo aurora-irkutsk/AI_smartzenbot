@@ -2,7 +2,7 @@ import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -17,18 +17,33 @@ router = Router()
 
 @router.message(Command("start"))
 async def start(message: Message):
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🖼️ Создать картинку")],
+            [KeyboardButton(text="🧹 Очистить контекст")]
+        ],
+        resize_keyboard=True
+
+@router.message(lambda msg: msg.text == "🖼️ Создать картинку")
+async def image_button(message: Message):
+    await message.answer("🖼️ Напишите описание для картинки:\n\nПример: *кот в космосе, цифровое искусство*")
+
+@router.message(lambda msg: msg.text == "🧹 Очистить контекст")
+async def clear_button(message: Message):
+    await message.answer("🧠 Контекст очищен. О чём поговорим?")
+    )
     await message.answer(
-        "🧠 Привет!\n\n" 
-        "Я Smart_Zen — ваш личный ассистент ❤️\n\n"
-        "Отвечаю на вопросы, объясняю сложное простым языком, помогаю в учёбе и работе 🔥\n\n"
-        "💡 Просто напишите свой запрос!"
+        "🧠 Привет! Я SmartZen ❤️\n"
+        "📝 Пиши любой вопрос — отвечу.\n"
+        "🖼️ Или нажми кнопку, чтобы создать изображение!",
+        reply_markup=kb
     )
 
 @router.message()
 async def handle_message(message: Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     try:
-        from openai import OpenAI
+        from openai import OpenAI # type: ignore
         client = OpenAI(
             base_url="https://api.groq.com/openai/v1",
             api_key=os.getenv("GROQ_API_KEY", "").strip()

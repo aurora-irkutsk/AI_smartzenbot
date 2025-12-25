@@ -67,11 +67,13 @@ dp.include_router(router)
 
 # Обработка Webhook
 async def on_startup(app: web.Application):
-    await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET, drop_pending_updates=True)
-
-async def on_shutdown(app: web.Application):
-    await bot.delete_webhook(drop_pending_updates=True)
-    await bot.session.close()
+    try:
+        print(f"🔧 Trying to set webhook to: '{WEBHOOK_URL}'")
+        await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET, drop_pending_updates=True)
+        print("✅ Webhook set successfully!")
+    except Exception as e:
+        print(f"❌ FAILED to set webhook: {e}")
+        # Не выходим, но webhook не активен
 
 def main():
     app = web.Application()

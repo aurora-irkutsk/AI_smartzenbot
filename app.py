@@ -6,8 +6,8 @@ from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
-# === ГЛОБАЛЬНОЕ СОСТОЯНИЕ: кто ожидает ввод описания ===
-user_states = {}
+# === СОСТОЯНИЯ ПОЛЬЗОВАТЕЛЕЙ ===
+user_states = {}  # {user_id: "image_mode"}
 
 # === НАСТРОЙКИ ===
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -26,7 +26,7 @@ router = Router()
 async def start(message: Message):
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🖼️ Создать картинку")],
+            [KeyboardButton(text="Создать картинку")],  # ← ОСТАВЛЯЕМ КАК ЕСТЬ
             [KeyboardButton(text="🧹 Очистить контекст")]
         ],
         resize_keyboard=True
@@ -34,44 +34,36 @@ async def start(message: Message):
     await message.answer(
         "🧠 Привет! Я Smart-Zen.\n"
         "📝 Пиши любой вопрос — отвечу.\n"
-        "🖼️ Нажми «Создать картинку», чтобы сгенерировать изображение по описанию!",
+        "🖼️ Нажми «Создать картинку», чтобы сгенерировать изображение!",
         reply_markup=kb
     )
 
-@router.message(lambda msg: msg.text == "🖼️ Создать картинку")
+@router.message(lambda msg: msg.text == "Создать картинку")
 async def image_button(message: Message):
-    user_states[message.from_user.id] = "awaiting_image_prompt"
-    await message.answer(
-        "🖼️ Отлично! Опишите, что вы хотите увидеть.\n\n"
-        "Примеры:\n"
-        "• футуристический город на закате\n"
-        "• портрет девушки в стиле Ван Гога\n"
-        "• a cute robot drinking coffee, cartoon style"
-    )
+    user_states[message.from_user.id] = "image_mode"
+    await message.answer("🖼️ Отлично! Теперь напишите описание картинки:")
 
 @router.message(lambda msg: msg.text == "🧹 Очистить контекст")
 async def clear_button(message: Message):
-    user_states.pop(msg.from_user.id, None)
-    await message.answer("🧠 Контекст очищен. О чём поговорим?")
+    user_states.pop(message.from_user.id, None)
+    await message.answer("🧠 Контекст очищен.")
 
+# === ГЛАВНЫЙ ОБРАБОТЧИК ===
 @router.message()
 async def handle_message(message: Message):
     user_id = message.from_user.id
-    
-    # Если пользователь ожидает ввод описания — генерируем картинку
-    if user_states.get(user_id) == "awaiting_image_prompt":
-        user_states.pop(user_id)  # Сбрасываем состояние
+
+    # Если пользователь в режиме генерации картинки
+    if user_states.get(user_id) == "image_mode":
+        user_states.pop(user_id)  # выходим из режима
         
         if not message.text:
             await message.answer("🖼️ Пожалуйста, отправьте текстовое описание.")
             return
-            
-        prompt = message.text.strip()
-        if not prompt:
-            await message.answer("🖼️ Описание не должно быть пустым.")
-            return
 
+        prompt = message.text.strip()
         await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
+        
         try:
             output = replicate.run(
                 "stability-ai/sdxl",
@@ -83,9 +75,9 @@ async def handle_message(message: Message):
                 await message.answer("❌ Не удалось создать изображение.")
         except Exception as e:
             print(f"🖼️ Replicate error: {e}")
-            await message.answer("⚠️ Ошибка генерации. Попробуйте другое описание.")
-    
-    # Иначе — отвечаем через AI
+            await message.answer("⚠️ Ошибка генерации.")
+
+    # Иначе — обычный AI
     else:
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")
         try:
@@ -101,9 +93,10 @@ async def handle_message(message: Message):
                         "role": "system",
                         "content": (
                             "Ты — умный, знающий и вежливый помощник. "
-                            "Никогда не упоминай, что ты ИИ, бот или программа. "
-                            "Всегда отвечай на языке пользователя. "
-                            "Будь кратким и по делу."
+                            "Никогда не упоминай, что ты ИИ. "
+                            "Отвечай на языке пользователя. "
+                            "Если спросят — переадресуй вопрос на содержание запроса или ответь уклончиво. "
+                            "Отвечай всегда по делу. "
                         )
                     },
                     {"role": "user", "content": message.text}
@@ -111,14 +104,13 @@ async def handle_message(message: Message):
                 timeout=30.0
             )
             await message.answer(response.choices[0].message.content.strip())
-        except Exception as e:
+        except Exception:
             await message.answer("⚠️ Временно не могу ответить.")
 
-# === WEBHOOK И ЗАПУСК ===
+# === WEBHOOK ===
 dp.include_router(router)
 
 async def on_startup(app):
-    print(f"✅ Устанавливаю webhook: {WEBHOOK_URL}")
     await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET)
 
 async def on_shutdown(app):

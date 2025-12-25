@@ -63,26 +63,23 @@ async def handle_message(message: Message):
 
         prompt = message.text.strip()
         await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
-        
         try:
-    # Используем Flux Schnell — новая бесплатная модель
-    output = replicate.run(
-        "black-forest-labs/flux-schnell",
-        input={
-            "prompt": prompt,
-            "go_fast": True,
-            "megapixels": "1",
-            "num_outputs": 1
-        }
-    )
-    if output and isinstance(output, list):
-        await message.answer_photo(photo=output[0])
-    else:
-        await message.answer("❌ Не удалось создать изображение.")
-except Exception as e:
-    print(f"🖼️ Replicate error: {e}")
-    await message.answer("⚠️ Ошибка генерации.")
-
+            output = replicate.run(
+                "black-forest-labs/flux-schnell",
+                input={
+                    "prompt": prompt,
+                    "go_fast": True,
+                    "megapixels": "1",
+                    "num_outputs": 1
+                }
+            )
+            if output and isinstance(output, list):
+                await message.answer_photo(photo=output[0])
+            else:
+                await message.answer("❌ Не удалось создать изображение.")
+        except Exception as e:
+            print(f"🖼️ Replicate error: {e}")
+            await message.answer("⚠️ Ошибка генерации.")
     # Иначе — обычный AI
     else:
         await bot.send_chat_action(chat_id=message.chat.id, action="typing")

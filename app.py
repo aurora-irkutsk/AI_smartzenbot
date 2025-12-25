@@ -10,9 +10,9 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 # Токены
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "your-secret-path-here")  # для безопасности
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "change-this").strip()
+WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzenbot.up.railway.app").strip()
 WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
-WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzenbot.up.railway.app")
 WEBHOOK_URL = f"{WEBHOOK_BASE_URL}{WEBHOOK_PATH}"
 
 # Инициализация

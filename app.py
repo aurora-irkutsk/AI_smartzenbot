@@ -37,7 +37,7 @@ async def handle_message(message: Message):
     await message.answer("🔍 Тест: сервер работает. Модель обновляется.")
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",  # ← ИСПРАВЛЕНО: актуальная модель
+            model="llama-3.2-90b-text-preview",  # ← ИСПРАВЛЕНО: актуальная модель
             messages=[{"role": "user", "content": message.text}],
             timeout=30.0
         )

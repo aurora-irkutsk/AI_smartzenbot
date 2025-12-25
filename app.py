@@ -27,43 +27,38 @@ async def send_welcome(message: Message):
         "💡 Задайте любой вопрос!"
     )
 
+from openai import OpenAI, OpenAIError
+import os
+
+# Инициализация клиента (лучше вынести за пределы функции)
+qwen_client = OpenAI(
+    api_key=os.getenv("QWEN_API_KEY", "").strip(),
+    base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+)
+
 @router.message()
 async def handle_message(message: Message):
     user_text = message.text
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            headers = {
-                "Authorization": f"Bearer {QWEN_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "qwen-max",
-                "input": {
-                    "messages": [{"role": "user", "content": user_text}]
-                }
-            }
-            response = await client.post(
-                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-                headers=headers,
-                json=payload
-            )
-            if response.status_code != 200:
-                error_text = response.text[:200]
-                await message.answer(f"❌ Ошибка Qwen API ({response.status_code})")
-                print(f"Qwen error: {error_text}")
-                return
+        # Запрос к Qwen через OpenAI-совместимый API
+        completion = qwen_client.chat.completions.create(
+            model="qwen-max",  # ✅ Правильное имя модели
+            messages=[
+                {"role": "user", "content": user_text}
+            ],
+            timeout=30.0
+        )
+        ai_reply = completion.choices[0].message.content.strip()
+        await message.answer(ai_reply)
 
-            data = response.json()
-            ai_reply = data["output"]["choices"][0]["message"]["content"].strip()
-            await message.answer(ai_reply)
-
+    except OpenAIError as e:
+        print(f"❌ Qwen API error: {e}")
+        await message.answer("⚠️ Ошибка AI. Проверьте ключ и квоту.")
     except Exception as e:
-        print(f"Exception: {e}")
-        await message.answer("⚠️ Произошла внутренняя ошибка. Попробуйте позже.")
-
-dp.include_router(router)
+        print(f"❌ Unexpected error: {e}")
+        await message.answer("⚠️ Внутренняя ошибка сервера.")
 
 # Обработка Webhook
 async def on_startup(app: web.Application):

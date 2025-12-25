@@ -38,7 +38,7 @@ async def start(message: Message):
         reply_markup=kb
     )
 
-@router.message(lambda msg: msg.text == "Создать картинку")
+@router.message(lambda msg: msg.text == "🖼️ Создать картинку")
 async def image_button(message: Message):
     user_states[message.from_user.id] = "awaiting_image_prompt"
     await message.answer(

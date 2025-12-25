@@ -24,7 +24,7 @@ async def start(message: Message):
 @router.message()
 async def handle_message(message: Message):
     print(f"📩 Получено: '{message.text}'")
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    await message.answer("🎯 Тест: сервер получил ваше сообщение!")
     
     try:
         api_key = os.getenv("QWEN_API_KEY", "").strip()

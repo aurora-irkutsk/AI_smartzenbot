@@ -12,7 +12,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "your-secret-path-here")  # для безопасности
 WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
-WEBHOOK_URL = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}{WEBHOOK_PATH}"
+WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://fallback.up.railway.app")
+WEBHOOK_URL = f"{WEBHOOK_BASE_URL}{WEBHOOK_PATH}"
 
 # Инициализация
 bot = Bot(token=TELEGRAM_BOT_TOKEN)

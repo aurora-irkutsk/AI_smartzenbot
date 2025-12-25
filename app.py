@@ -33,6 +33,41 @@ async def on_startup(app):
 async def on_shutdown(app):
     await bot.delete_webhook()
 
+@router.message()
+async def handle_message(message: Message):
+    user_text = message.text
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    
+    try:
+        # Получаем API-ключ
+        api_key = os.getenv("QWEN_API_KEY", "").strip()
+        if not api_key:
+            await message.answer("❌ QWEN_API_KEY не настроен.")
+            return
+
+        # Импортируем и настраиваем dashscope
+        import dashscope
+        dashscope.api_key = api_key
+        dashscope.base_http_api_url = 'https://dashscope-intl.aliyuncs.com/api/v1'
+
+        # Запрос к Qwen
+        response = dashscope.Generation.call(
+            model="qwen-max",
+            messages=[{"role": "user", "content": user_text}],
+            result_format="message"
+        )
+
+        if response.status_code == 200:
+            ai_reply = response.output.choices[0].message.content.strip()
+            await message.answer(ai_reply)
+        else:
+            error_msg = getattr(response, 'message', 'Ошибка API')
+            await message.answer(f"❌ AI: {error_msg[:150]}")
+            
+    except Exception as e:
+        print(f"Ошибка Qwen: {e}")
+        await message.answer("⚠️ Ошибка AI. Проверьте консоль.")
+
 def main():
     app = web.Application()
     SimpleRequestHandler(dp, bot, secret_token=WEBHOOK_SECRET).register(app, path=WEBHOOK_PATH)

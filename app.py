@@ -22,7 +22,7 @@ router = Router()
 async def start(message: Message):
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🖼️ Изображение")],
+            [KeyboardButton(text="🖼️ Создать картинку")],
             [KeyboardButton(text="🧹 Очистить контекст")]
         ],
         resize_keyboard=True

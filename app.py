@@ -38,7 +38,7 @@ async def handle_message(message: Message):
     
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",  # самый мощный бесплатный
+            model="llama-3.3-70b-versatile",  # самый мощный бесплатный
             messages=[{"role": "user", "content": message.text}],
             timeout=30.0
         )

@@ -39,7 +39,7 @@ async def handle_message(message: Message):
         dashscope.base_http_api_url = 'https://dashscope-intl.aliyuncs.com/api/v1'
 
         response = dashscope.Generation.call(
-            model="qwen-max",
+            model="qwen-turbo",
             messages=[{"role": "user", "content": user_text}],
             result_format="message"
         )

@@ -13,7 +13,7 @@ WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzen
 WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
 WEBHOOK_URL = f"{WEBHOOK_BASE_URL}{WEBHOOK_PATH}"
 
-# OpenRouter client
+# OpenRouter client — без пробелов!
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY", "").strip()
@@ -32,9 +32,8 @@ async def handle_message(message: Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # Используем Google Gemini через OpenRouter
         response = client.chat.completions.create(
-            model="google/gemini-pro",  # ← официальное имя в OpenRouter
+            model="google/gemini-pro",
             messages=[{"role": "user", "content": message.text}],
             timeout=30.0
         )
@@ -46,7 +45,6 @@ async def handle_message(message: Message):
 
 dp.include_router(router)
 
-# Webhook
 async def on_startup(app: web.Application):
     print(f"✅ Устанавливаю webhook: {WEBHOOK_URL}")
     await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET, drop_pending_updates=True)

@@ -34,7 +34,7 @@ async def start(message: Message):
 
 @router.message()
 async def handle_message(message: Message):
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    await message.answer("🔍 Тест: сервер работает. Модель обновляется.")
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",  # ← ИСПРАВЛЕНО: актуальная модель

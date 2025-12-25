@@ -17,7 +17,11 @@ router = Router()
 
 @router.message(Command("start"))
 async def start(message: Message):
-    await message.answer("Привет")
+    await message.answer(
+        "🧠 Привет! Я SmartZen — ваш AI-ассистент.\n"
+        "Отвечаю на вопросы, объясняю сложное простым языком, помогаю в учёбе и работе.\n\n"
+        "💡 Просто напишите свой запрос!"
+    )
 
 @router.message()
 async def handle_message(message: Message):

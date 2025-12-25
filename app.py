@@ -22,7 +22,7 @@ router = Router()
 async def start(message: Message):
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🖼️ Создать картинку")],
+            [KeyboardButton(text="/image кот в космосе")],
             [KeyboardButton(text="🧹 Очистить контекст")]
         ],
         resize_keyboard=True
@@ -41,6 +41,30 @@ async def image_button(message: Message):
 @router.message(lambda msg: msg.text == "🧹 Очистить контекст")
 async def clear_button(message: Message):
     await message.answer("🧠 Контекст очищен. О чём поговорим?")
+
+@router.message(Command("image"))
+async def generate_image_command(message: Message):
+    # Извлекаем описание после "/image"
+    prompt = message.text.replace("/image", "", 1).strip()
+    if not prompt:
+        await message.answer("🖼️ Укажите описание: /image [ваш запрос]\n\nПример: /image кот в очках, мультяшный стиль")
+        return
+
+    await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
+    
+    try:
+        # Генерация через Stable Diffusion
+        output = replicate.run(
+            "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c7121092325b256878870e1030c52948382",
+            input={"prompt": prompt}
+        )
+        if output and isinstance(output, list):
+            await message.answer_photo(photo=output[0])
+        else:
+            await message.answer("❌ Не удалось создать изображение.")
+    except Exception as e:
+        print(f"🖼️ Replicate error: {e}")
+        await message.answer("⚠️ Ошибка генерации. Попробуйте другое описание.")
 
 @router.message()
 async def handle_message(message: Message):

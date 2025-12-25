@@ -1,16 +1,18 @@
 import os
 import asyncio
 import httpx
+from aiohttp import web
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-# Получаем токены из переменных окружения (Railway)
+# Токены
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
-
-# Укажите вашу модель Qwen (пока qwen-max — можно изменить позже)
-QWEN_API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "your-secret-path-here")  # для безопасности
+WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
+WEBHOOK_URL = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}{WEBHOOK_PATH}"
 
 # Инициализация
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -20,8 +22,8 @@ router = Router()
 @router.message(Command("start"))
 async def send_welcome(message: Message):
     await message.answer(
-        "🧠 Привет! Я Smart_Zen — ваш помощник.\n\n"
-        "💡 Задайте любой вопрос: о технологиях, жизни, учёбе, бизнесе — и я постараюсь помочь!"
+        "🧠 Привет! Я SmartZen — ваш AI-помощник на базе Qwen.\n\n"
+        "💡 Задайте любой вопрос!"
     )
 
 @router.message()
@@ -38,26 +40,50 @@ async def handle_message(message: Message):
             payload = {
                 "model": "qwen-max",
                 "input": {
-                    "messages": [
-                        {"role": "user", "content": user_text}
-                    ]
+                    "messages": [{"role": "user", "content": user_text}]
                 }
             }
-            response = await client.post(QWEN_API_URL, headers=headers, json=payload)
-            response.raise_for_status()
+            response = await client.post(
+                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+                headers=headers,
+                json=payload
+            )
+            if response.status_code != 200:
+                error_text = response.text[:200]
+                await message.answer(f"❌ Ошибка Qwen API ({response.status_code})")
+                print(f"Qwen error: {error_text}")
+                return
+
             data = response.json()
             ai_reply = data["output"]["choices"][0]["message"]["content"].strip()
+            await message.answer(ai_reply)
 
     except Exception as e:
-        print(f"Ошибка: {e}")
-        ai_reply = "⚠️ Извините, произошла ошибка. Проверьте API-ключ или попробуйте позже."
-
-    await message.answer(ai_reply)
+        print(f"Exception: {e}")
+        await message.answer("⚠️ Произошла внутренняя ошибка. Попробуйте позже.")
 
 dp.include_router(router)
 
-async def main():
-    await dp.start_polling(bot)
+# Обработка Webhook
+async def on_startup(app: web.Application):
+    await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET, drop_pending_updates=True)
+
+async def on_shutdown(app: web.Application):
+    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.session.close()
+
+def main():
+    app = web.Application()
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+        secret_token=WEBHOOK_SECRET,
+    )
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+    setup_application(app, dp, bot=bot)
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

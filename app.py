@@ -2,7 +2,7 @@ import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -17,12 +17,17 @@ router = Router()
 
 @router.message(Command("start"))
 async def start(message: Message):
-    await message.answer(
-        welcome_image_url = "https://github.com/aurora-irkutsk/AI_smartzenbot/blob/main/start.png"
-        "🧠 Привет!\n\n" 
-        "Я Smart_Zen — ваш личный ассистент ❤️\n\n"
-        "Отвечаю на вопросы, объясняю сложное простым языком, помогаю в учёбе и работе 🔥\n\n"
-        "💡 Просто напишите свой запрос!"
+    # 🔥 Исправленная ссылка: убрано "blob", добавлено "raw", убраны пробелы
+    welcome_image_url = "https://github.com/aurora-irkutsk/AI_smartzenbot/raw/main/start.png"
+    
+    await message.answer_photo(
+        photo=welcome_image_url,
+        caption=(
+            "🧠 Привет!\n\n" 
+            "Я Smart_Zen — ваш личный ассистент ❤️\n\n"
+            "Отвечаю на вопросы, объясняю сложное простым языком, помогаю в учёбе и работе 🔥\n\n"
+            "💡 Просто напишите свой запрос!"
+        )
     )
 
 @router.message()
@@ -58,7 +63,6 @@ async def handle_message(message: Message):
 
 dp.include_router(router)
 
-# 🔥 Обязательно: регистрация webhook
 async def on_startup(app):
     print(f"✅ Устанавливаю webhook: {WEBHOOK_URL}")
     await bot.set_webhook(WEBHOOK_URL, secret_token=WEBHOOK_SECRET)
@@ -69,8 +73,8 @@ async def on_shutdown(app):
 def main():
     app = web.Application()
     SimpleRequestHandler(dp, bot, secret_token=WEBHOOK_SECRET).register(app, path=WEBHOOK_PATH)
-    app.on_startup.append(on_startup)      # ← ЭТО ОБЯЗАТЕЛЬНО
-    app.on_shutdown.append(on_shutdown)    # ← ЭТО ОБЯЗАТЕЛЬНО
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
     web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
 
 if __name__ == "__main__":

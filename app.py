@@ -35,20 +35,16 @@ async def start(message: Message):
 @router.message()
 async def handle_message(message: Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-    
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",  # самый мощный бесплатный
+            model="llama-3.3-70b-versatile",  # ← ИСПРАВЛЕНО: актуальная модель
             messages=[{"role": "user", "content": message.text}],
             timeout=30.0
         )
-        answer = response.choices[0].message.content.strip()
-        await message.answer(answer)
-        
+        await message.answer(response.choices[0].message.content.strip())
     except Exception as e:
         print(f"❌ Groq error: {e}")
         await message.answer("⚠️ Ошибка AI. Попробуйте позже.")
-
 dp.include_router(router)
 
 # === Webhook Management ===

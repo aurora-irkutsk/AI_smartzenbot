@@ -80,36 +80,33 @@ async def start_image_flow(message: Message):
     awaiting_image_prompt.add(message.from_user.id)
     await message.answer("🖼️ Отлично! Опишите, что вы хотите увидеть:")
 
-@router.message(lambda msg: msg.from_user.id in awaiting_image_prompt and msg.text)
+@router.message(lambda msg: msg.from_user.id in awaiting_image_prompt)
 async def generate_image_from_text(message: Message):
+    # Убираем пользователя из режима ожидания СРАЗУ
     user_id = message.from_user.id
-    prompt = message.text.strip()
-    
-    if not prompt:
-        await message.answer("🖼️ Пожалуйста, напишите описание.")
-        return
-
-    # Убираем пользователя из режима ожидания
     awaiting_image_prompt.discard(user_id)
     
+    # Поддерживаем ТОЛЬКО текст
+    if not message.text:
+        await message.answer("🖼️ Пожалуйста, отправьте текстовое описание.")
+        return
+        
+    prompt = message.text.strip()
+    if not prompt:
+        await message.answer("🖼️ Описание не должно быть пустым.")
+        return
+
     await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
     
     try:
-        # Генерация через Stable Diffusion XL
         output = replicate.run(
             "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c7121092325b256878870e1030c52948382",
-            input={
-                "prompt": prompt,
-                "num_inference_steps": 30,
-                "guidance_scale": 7.5
-            }
+            input={"prompt": prompt}
         )
-        
         if output and isinstance(output, list):
             await message.answer_photo(photo=output[0])
         else:
             await message.answer("❌ Не удалось создать изображение.")
-            
     except Exception as e:
         print(f"🖼️ Replicate error: {e}")
         await message.answer("⚠️ Ошибка генерации. Попробуйте другое описание.")

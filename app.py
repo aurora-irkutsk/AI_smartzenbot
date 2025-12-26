@@ -57,20 +57,6 @@ async def handle_message(message: Message):
                 {"role": "user", "content": message.text}
             ],
             timeout=30.0
-            
-            ai_reply = response.choices[0].message.content.strip()
-        
-        # 🔥 ОГРАНИЧЕНИЕ ДЛИНЫ: максимум 500 символов
-        if len(ai_reply) > 500:
-            ai_reply = ai_reply[:497] + "..."
-        
-        ai_message = {"role": "assistant", "content": ai_reply}
-        
-        # Сохраняем обмен в историю
-        chat_histories[chat_id].append(user_message)
-        chat_histories[chat_id].append(ai_message)
-        
-        await message.answer(ai_reply)
         )
         await message.answer(response.choices[0].message.content.strip())
     except Exception as e:

@@ -140,7 +140,7 @@ async def handle_message(message: Message):
         # Для простых вопросов — коротко
         # Для сложных («объясни», «напиши код») — длиннее
         if any(word in user_text.lower() for word in ["объясни", "опиши", "напиши код", "сделай", "как работает"]):
-            max_length = 1200
+            max_length = 2000
         else:
             max_length = 800
 

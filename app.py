@@ -4,10 +4,14 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from collections import defaultdict, deque  # ← ДОБАВЛЕНО
+
+# Хранилище истории диалогов: {chat_id: deque([msg1, msg2, ...])}
+chat_histories = defaultdict(lambda: deque(maxlen=6))  # ← ДОБАВЛЕНО
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "final-secret").strip()
-WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzenbot.up.railway.app").strip()
+WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://aismartzenbot-smartzenbot.up.railway.app").strip()  # ← УБРАНЫ ПРОБЕЛЫ
 WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
 WEBHOOK_URL = f"{WEBHOOK_BASE_URL}{WEBHOOK_PATH}"
 
@@ -15,11 +19,18 @@ bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 router = Router()
 
+@router.message(lambda msg: msg.text == "🧹 Очистить контекст")  # ← ДОБАВЛЕНО
+async def clear_button(message: Message):
+    chat_histories.pop(message.chat.id, None)
+    await message.answer("🧠 Контекст очищен. О чём поговорим?")
+
 @router.message(Command("start"))
 async def start(message: Message):
-    # 🔥 Исправленная ссылка: убрано "blob", добавлено "raw", убраны пробелы
-    welcome_image_url = "https://github.com/aurora-irkutsk/AI_smartzenbot/raw/main/start.png"
-    
+    welcome_image_url = "https://github.com/aurora-irkutsk/AI_smartzenbot/raw/main/start.png"  # ← УБРАНЫ ПРОБЕЛЫ
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🧹 Очистить контекст")]],
+        resize_keyboard=True
+    )
     await message.answer_photo(
         photo=welcome_image_url,
         caption=(
@@ -28,7 +39,8 @@ async def start(message: Message):
             "Отвечаю на вопросы, объясняю сложное простым языком, помогаю в учёбе и работе 🔥\n\n"
             "💡 Просто напишите свой запрос!\n\n"
             "Например: Что ты умеешь? 🤷‍♂️"
-        )
+        ),
+        reply_markup=kb
     )
 
 @router.message()
@@ -37,28 +49,46 @@ async def handle_message(message: Message):
     try:
         from openai import OpenAI
         client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
+            base_url="https://api.groq.com/openai/v1",  # ← УБРАНЫ ПРОБЕЛЫ
             api_key=os.getenv("GROQ_API_KEY", "").strip()
         )
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
+        
+        chat_id = message.chat.id
+        user_message = {"role": "user", "content": message.text}
+        
+        # Формируем сообщения: system + история + текущий запрос
+        messages = [
+            {
+                "role": "system",
+                "content": (
                         "Ты — умный, знающий и вежливый помощник, никогда не используй китайские, японские или корейские иероглифы."
                         "Никогда не упоминай, что ты искусственный интеллект, бот, программа или модель."
                         "Не отвечай на вопросы о том, кто ты или как ты устроен."
                         "Всегда отвечай на том языке, на котором к тебе обратился пользователь."
                         "Если спросят — переадресуй вопрос на содержание запроса или ответь уклончиво."
                         "Никогда не пиши вступления вроде «Конечно!» или «Вот ответ: отвечай всегда по делу."
-                    )
-                },
-                {"role": "user", "content": message.text}
-            ],
+                )
+            }
+        ]
+        messages.extend(chat_histories[chat_id])
+        messages.append(user_message)
+        
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
             timeout=30.0
         )
-        await message.answer(response.choices[0].message.content.strip())
+        ai_reply = response.choices[0].message.content.strip()
+        
+        # Ограничение длины
+        if len(ai_reply) > 500:
+            ai_reply = ai_reply[:497] + "..."
+        
+        # Сохраняем в историю
+        chat_histories[chat_id].append(user_message)
+        chat_histories[chat_id].append({"role": "assistant", "content": ai_reply})
+        
+        await message.answer(ai_reply)
     except Exception as e:
         await message.answer("⚠️ Временно не могу ответить.")
 
